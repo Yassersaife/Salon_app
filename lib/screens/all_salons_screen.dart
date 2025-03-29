@@ -197,7 +197,7 @@ class _AllSalonsGridScreenState extends State<AllSalonsGridScreen> {
               children: [
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                  child: Image.network(
+                  child: Image.asset(
                     salon.imageUrl,
                     height: 120,
                     width: double.infinity,

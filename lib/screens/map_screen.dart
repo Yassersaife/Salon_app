@@ -1,6 +1,6 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
@@ -17,79 +17,20 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
-  final Completer<GoogleMapController> _mapController = Completer();
-  final Set<Marker> _markers = {};
-  final List<LatLng> _palestinianCities = [
-    const LatLng(31.9522, 35.2332), // رام الله
-    const LatLng(31.7683, 35.2137), // القدس
-    const LatLng(32.2227, 35.2108), // نابلس
-    const LatLng(31.5383, 35.0998), // الخليل
-    const LatLng(32.4618, 35.2956), // جنين
-    const LatLng(31.9032, 35.2039), // البيرة
-    const LatLng(31.7038, 35.1951), // بيت لحم
-    const LatLng(32.3211, 35.3691), // طوباس
-    const LatLng(32.1921, 35.2542), // طولكرم
-    const LatLng(31.4448, 34.3656), // غزة
-    const LatLng(31.5379, 34.4644), // خان يونس
-    const LatLng(31.5022, 34.4667), // رفح
-    const LatLng(31.3546, 34.3088), // دير البلح
-    const LatLng(31.2827, 34.2502), // بيت حانون
-  ];
+  final MapController _mapController = MapController();
+  List<Marker> _salonMarkers = [];
 
-  final Map<String, String> _palestinianCityNames = {
-    '31.9522,35.2332': 'رام الله',
-    '31.7683,35.2137': 'القدس',
-    '32.2227,35.2108': 'نابلس',
-    '31.5383,35.0998': 'الخليل',
-    '32.4618,35.2956': 'جنين',
-    '31.9032,35.2039': 'البيرة',
-    '31.7038,35.1951': 'بيت لحم',
-    '32.3211,35.3691': 'طوباس',
-    '32.1921,35.2542': 'طولكرم',
-    '31.4448,34.3656': 'غزة',
-    '31.5379,34.4644': 'خان يونس',
-    '31.5022,34.4667': 'رفح',
-    '31.3546,34.3088': 'دير البلح',
-    '31.2827,34.2502': 'بيت حانون',
-  };
-
-  String _selectedCity = 'الكل';
-  String _selectedArea = 'الكل';
-  CameraPosition _initialCameraPosition = const CameraPosition(
-    target: LatLng(31.9522, 35.2332), // رام الله كموقع مبدئي
-    zoom: 9.0,
-  );
+  // الإحداثيات الافتراضية والإعدادات الأولية
+  LatLng _currentUserLocation = LatLng(31.9522, 35.2332); // إحداثيات افتراضية
+  List<Salon> _nearbySalons = [];
+  double _currentZoom = 14.0;
+  double _searchRadius = 5.0; // نصف قطر البحث بالكيلومتر
 
   bool _isLoading = false;
   bool _isLocationGranted = false;
-  double _searchRadius = 5.0; // نصف قطر البحث بالكيلومتر
 
-  final List<String> _palestineCities = [
-    'الكل',
-    'رام الله',
-    'القدس',
-    'نابلس',
-    'الخليل',
-    'جنين',
-    'البيرة',
-    'بيت لحم',
-    'طوباس',
-    'طولكرم',
-    'غزة',
-    'خان يونس',
-    'رفح',
-    'دير البلح',
-    'بيت حانون',
-  ];
-
-  final Map<String, List<String>> _cityAreas = {
-    'رام الله': ['الكل', 'المنارة', 'الماصيون', 'البالوع', 'الطيرة', 'البيرة', 'عين مصباح'],
-    'القدس': ['الكل', 'البلدة القديمة', 'الشيخ جراح', 'بيت حنينا', 'شعفاط', 'العيسوية', 'سلوان'],
-    'نابلس': ['الكل', 'وسط البلد', 'رفيديا', 'المخفية', 'المساكن الشعبية', 'الضاحية', 'عسكر'],
-    'الخليل': ['الكل', 'وسط البلد', 'وادي الهرية', 'عين سارة', 'نمرة', 'حارة الشيخ', 'الحاووز'],
-    'غزة': ['الكل', 'الرمال', 'التفاح', 'الشجاعية', 'الزيتون', 'الصبرة', 'تل الهوى'],
-    // يمكن إضافة مناطق لبقية المدن
-  };
+  // معلومات الصالون المختار
+  Salon? _selectedSalon;
 
   @override
   void initState() {
@@ -107,8 +48,24 @@ class _MapScreenState extends State<MapScreen> {
     if (_isLocationGranted) {
       _getCurrentLocation();
     } else {
-      // إذا لم يتم منح الإذن، نحمل الصالونات في رام الله افتراضياً
-      _loadSalonsForCity('رام الله');
+      // إذا لم يتم منح الإذن، نحمل جميع الصالونات
+      _loadAllSalons();
+
+      // إظهار رسالة للمستخدم
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('يرجى السماح بالوصول إلى الموقع لرؤية الصالونات القريبة منك'),
+          action: SnackBarAction(
+            label: 'السماح',
+            onPressed: () async {
+              final newStatus = await Permission.location.request();
+              if (newStatus.isGranted) {
+                _getCurrentLocation();
+              }
+            },
+          ),
+        ),
+      );
     }
   }
 
@@ -118,84 +75,30 @@ class _MapScreenState extends State<MapScreen> {
     });
 
     try {
+      // الحصول على الموقع الحالي
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      _initialCameraPosition = CameraPosition(
-        target: LatLng(position.latitude, position.longitude),
-        zoom: 14.0,
-      );
-
-      final GoogleMapController controller = await _mapController.future;
-      controller.animateCamera(CameraUpdate.newCameraPosition(_initialCameraPosition));
-
-      // تحديد المدينة الأقرب للمستخدم
-      String closestCity = _findClosestCity(position.latitude, position.longitude);
       setState(() {
-        _selectedCity = closestCity;
-        _selectedArea = 'الكل';
+        _currentUserLocation = LatLng(position.latitude, position.longitude);
       });
 
-      // تحميل الصالونات في المدينة الأقرب
-      _loadSalonsForCity(closestCity);
+      // تحريك الخريطة إلى الموقع الحالي
+      _mapController.move(_currentUserLocation, _currentZoom);
+
+      // تحميل الصالونات القريبة
+      _loadNearbySalons();
 
     } catch (e) {
       print('Error getting current location: $e');
-      // تحميل صالونات رام الله افتراضياً
-      _loadSalonsForCity('رام الله');
-    }
-  }
+      // تحميل جميع الصالونات في حالة الفشل
+      _loadAllSalons();
 
-  String _findClosestCity(double lat, double lng) {
-    double minDistance = double.infinity;
-    String closestCity = 'رام الله'; // افتراضي
-
-    for (var cityLatLng in _palestinianCities) {
-      double distance = Geolocator.distanceBetween(
-          lat, lng, cityLatLng.latitude, cityLatLng.longitude
+      // إظهار رسالة خطأ
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر تحديد موقعك الحالي: $e')),
       );
-
-      if (distance < minDistance) {
-        minDistance = distance;
-        String key = '${cityLatLng.latitude},${cityLatLng.longitude}';
-        closestCity = _palestinianCityNames[key] ?? 'رام الله';
-      }
-    }
-
-    return closestCity;
-  }
-
-  Future<void> _loadSalonsForCity(String city) async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      // في الإنتاج، سنستدعي مزود الصالونات لتحميل الصالونات حسب المدينة
-      final salonsProvider = Provider.of<SalonsProvider>(context, listen: false);
-      await salonsProvider.fetchSalons();
-
-      // نصفي الصالونات حسب المدينة
-      final salons = salonsProvider.salons;
-      List<Salon> filteredSalons = [];
-
-      if (city == 'الكل') {
-        filteredSalons = salons;
-      } else {
-        filteredSalons = salons.where((salon) =>
-            _isSalonInCity(salon, city, _selectedArea)
-        ).toList();
-      }
-
-      // نمركز الخريطة على المدينة المختارة
-      _moveToCity(city);
-
-      // ننشئ العلامات على الخريطة
-      _createMarkers(filteredSalons);
-
-    } catch (e) {
-      print('Error loading salons for city: $e');
     } finally {
       setState(() {
         _isLoading = false;
@@ -203,260 +106,295 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  bool _isSalonInCity(Salon salon, String city, String area) {
-    // في الإنتاج، سيكون هناك حقل للمدينة والمنطقة في نموذج الصالون
-    // هنا نحاكي ذلك باستخدام العنوان
-    bool inCity = salon.address.contains(city);
-    if (area == 'الكل') {
-      return inCity;
-    } else {
-      return inCity && salon.address.contains(area);
+  Future<void> _loadAllSalons() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final salonsProvider = Provider.of<SalonsProvider>(context, listen: false);
+      await salonsProvider.fetchSalons();
+
+      setState(() {
+        _nearbySalons = salonsProvider.salons;
+      });
+
+      _createSalonMarkers();
+
+    } catch (e) {
+      print('Error loading all salons: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر تحميل الصالونات: $e')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
-  void _moveToCity(String city) {
-    if (city == 'الكل') return;
+  Future<void> _loadNearbySalons() async {
+    setState(() {
+      _isLoading = true;
+    });
 
-    // نجد إحداثيات المدينة
-    for (var i = 0; i < _palestinianCities.length; i++) {
-      String key = '${_palestinianCities[i].latitude},${_palestinianCities[i].longitude}';
-      if (_palestinianCityNames[key] == city) {
-        _initialCameraPosition = CameraPosition(
-          target: _palestinianCities[i],
-          zoom: 12.0,
+    try {
+      final salonsProvider = Provider.of<SalonsProvider>(context, listen: false);
+      await salonsProvider.fetchSalons();
+
+      // جلب جميع الصالونات
+      final allSalons = salonsProvider.salons;
+
+      // تصفية الصالونات حسب المسافة
+      List<Salon> filtered = [];
+      for (var salon in allSalons) {
+        double distance = Geolocator.distanceBetween(
+          _currentUserLocation.latitude,
+          _currentUserLocation.longitude,
+          salon.latitude,
+          salon.longitude,
+        ) / 1000; // تحويل من متر إلى كيلومتر
+
+        if (distance <= _searchRadius) {
+          filtered.add(salon);
+        }
+      }
+
+      // ترتيب الصالونات حسب المسافة (الأقرب أولاً)
+      filtered.sort((a, b) {
+        double distanceA = Geolocator.distanceBetween(
+          _currentUserLocation.latitude,
+          _currentUserLocation.longitude,
+          a.latitude,
+          a.longitude,
         );
 
-        _mapController.future.then((controller) {
-          controller.animateCamera(CameraUpdate.newCameraPosition(_initialCameraPosition));
+        double distanceB = Geolocator.distanceBetween(
+          _currentUserLocation.latitude,
+          _currentUserLocation.longitude,
+          b.latitude,
+          b.longitude,
+        );
+
+        return distanceA.compareTo(distanceB);
+      });
+
+      setState(() {
+        _nearbySalons = filtered;
+      });
+
+      _createSalonMarkers();
+
+      if (filtered.isEmpty) {
+        // إذا لم يتم العثور على صالونات قريبة، زيادة نصف القطر تلقائياً
+        setState(() {
+          _searchRadius = _searchRadius + 5.0;
         });
-        break;
+
+
+
+        // إعادة تحميل الصالونات بنصف قطر أكبر
+        _loadNearbySalons();
       }
+
+    } catch (e) {
+      print('Error loading nearby salons: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر تحميل الصالونات القريبة: $e')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
-  void _createMarkers(List<Salon> salons) {
-    _markers.clear();
+  void _createSalonMarkers() {
+    _salonMarkers = [];
 
-    // إضافة علامات للمدن الرئيسية
-    for (var i = 0; i < _palestinianCities.length; i++) {
-      String city = _palestinianCityNames['${_palestinianCities[i].latitude},${_palestinianCities[i].longitude}'] ?? '';
-      if (city.isNotEmpty) {
-        _markers.add(
-          Marker(
-            markerId: MarkerId('city_$i'),
-            position: _palestinianCities[i],
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-            infoWindow: InfoWindow(
-              title: city,
-              snippet: 'انقر لعرض صالونات $city',
-              onTap: () {
-                setState(() {
-                  _selectedCity = city;
-                  _selectedArea = 'الكل';
-                });
-                _loadSalonsForCity(city);
-              },
+    // إضافة علامة لموقع المستخدم الحالي
+    if (_isLocationGranted) {
+      _salonMarkers.add(
+        Marker(
+          width: 40.0,
+          height: 40.0,
+          point: _currentUserLocation,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.blue.withOpacity(0.7),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+            ),
+            child: const Icon(
+              Icons.my_location,
+              color: Colors.white,
+              size: 20,
             ),
           ),
-        );
-      }
+        ),
+      );
     }
 
     // إضافة علامات للصالونات
-    for (final salon in salons) {
-      final marker = Marker(
-        markerId: MarkerId('salon_${salon.id}'),
-        position: LatLng(salon.latitude, salon.longitude),
-        infoWindow: InfoWindow(
-          title: salon.name,
-          snippet: '${salon.rating} ★ - ${salon.address}',
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => SalonDetailsScreen(salonId: salon.id),
-              ),
-            );
-          },
-        ),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
-        onTap: () {
-          _showSalonPreview(salon);
-        },
-      );
+    for (var salon in _nearbySalons) {
+      // حساب المسافة من موقع المستخدم
+      double distance = 0;
+      if (_isLocationGranted) {
+        distance = Geolocator.distanceBetween(
+          _currentUserLocation.latitude,
+          _currentUserLocation.longitude,
+          salon.latitude,
+          salon.longitude,
+        ) / 1000; // تحويل من متر إلى كيلومتر
+      }
 
-      _markers.add(marker);
-    }
+      _salonMarkers.add(
+        Marker(
+          width: 100.0,
+          height: 70.0,
+          point: LatLng(salon.latitude, salon.longitude),
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                _selectedSalon = salon;
+              });
 
-    setState(() {});
-  }
-
-  void _onMapCreated(GoogleMapController controller) {
-    _mapController.complete(controller);
-  }
-
-  void _showSalonPreview(Salon salon) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: 220,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            // مقبض السحب
-            Container(
-              margin: const EdgeInsets.only(top: 10),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // صورة الصالون
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      salon.imageUrl,
-                      width: 100,
-                      height: 100,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          width: 100,
-                          height: 100,
-                          color: Colors.grey[200],
-                          child: const Icon(Icons.image_not_supported, size: 30),
-                        );
-                      },
-                    ),
+              // تحريك الخريطة لوضع الصالون في المنتصف
+              _mapController.move(LatLng(salon.latitude, salon.longitude), _currentZoom);
+            },
+            child: Column(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.8),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
                   ),
-
-                  const SizedBox(width: 16),
-
-                  // معلومات الصالون
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          salon.name,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.right,
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Text(
-                              '${salon.rating}',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(width: 4),
-                            const Icon(Icons.star, color: Colors.amber, size: 18),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          salon.address,
-                          style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.right,
-                        ),
-                        const SizedBox(height: 8),
-                        // عدد الخدمات
-                        Text(
-                          'عدد الخدمات: ${salon.services.length}',
-                          style: TextStyle(
-                            color: AppColors.primary,
-                            fontSize: 14,
-                          ),
-                          textAlign: TextAlign.right,
+                  padding: const EdgeInsets.all(8),
+                  child: const Icon(Icons.spa, color: Colors.white, size: 18),
+                ),
+                if (_isLocationGranted)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // زر الحجز
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context); // إغلاق القائمة السفلية
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SalonDetailsScreen(salonId: salon.id),
+                    child: Text(
+                      '${distance.toStringAsFixed(1)} كم',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
                       ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
                   ),
-                  child: const Text('عرض التفاصيل والحجز'),
+                Container(
+                  margin: const EdgeInsets.only(top: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    salon.name,
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 8,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
-    );
+      );
+    }
+
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('صالونات فلسطين'),
+        title: Text(_isLocationGranted ? 'الصالونات القريبة منك' : 'جميع الصالونات'),
         actions: [
+          // زر تغيير نطاق البحث
+          if (_isLocationGranted)
+            IconButton(
+              icon: const Icon(Icons.tune),
+              onPressed: _showRadiusDialog,
+              tooltip: 'تغيير نطاق البحث',
+            ),
+          // زر تحديث الموقع
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _isLocationGranted ? _getCurrentLocation : null,
-            tooltip: 'تحديث الموقع',
+            onPressed: _isLocationGranted ? _getCurrentLocation : _loadAllSalons,
+            tooltip: 'تحديث',
           ),
         ],
       ),
       body: Stack(
         children: [
-          // خريطة Google
-          GoogleMap(
-            initialCameraPosition: _initialCameraPosition,
-            onMapCreated: _onMapCreated,
-            myLocationEnabled: _isLocationGranted,
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: false,
-            markers: _markers,
+          // خريطة OpenStreetMap
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: _currentUserLocation,
+              initialZoom: _currentZoom,
+              onTap: (tapPosition, latLng) {
+                // إخفاء بطاقة الصالون عند النقر على الخريطة
+                setState(() {
+                  _selectedSalon = null;
+                });
+              },
+              interactionOptions: const InteractionOptions(
+                enableMultiFingerGestureRace: true,
+              ),
+            ),
+            children: [
+              // طبقة الخريطة الأساسية
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.example.salon_booking_app',
+                maxZoom: 19,
+              ),
+
+              // رسم دائرة لنطاق البحث (إذا تم تحديد الموقع)
+              if (_isLocationGranted)
+                CircleLayer(
+                  circles: [
+                    CircleMarker(
+                      point: _currentUserLocation,
+                      radius: _searchRadius * 1000, // تحويل إلى متر
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderColor: AppColors.primary.withOpacity(0.5),
+                      borderStrokeWidth: 2,
+                    ),
+                  ],
+                ),
+
+              // طبقة العلامات
+              MarkerLayer(markers: _salonMarkers),
+            ],
           ),
 
           // مؤشر التحميل
@@ -468,7 +406,7 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ),
 
-          // مرشحات البحث
+          // معلومات عن عدد الصالونات القريبة
           Positioned(
             top: 16,
             right: 16,
@@ -479,69 +417,23 @@ class _MapScreenState extends State<MapScreen> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                padding: const EdgeInsets.all(12.0),
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            value: _selectedCity,
-                            decoration: const InputDecoration(
-                              labelText: 'المدينة',
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            ),
-                            items: _palestineCities.map((city) {
-                              return DropdownMenuItem<String>(
-                                value: city,
-                                child: Text(city),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedCity = value!;
-                                _selectedArea = 'الكل';
-                              });
-                              _loadSalonsForCity(value!);
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            value: _selectedArea,
-                            decoration: const InputDecoration(
-                              labelText: 'المنطقة',
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            ),
-                            items: (_cityAreas[_selectedCity] ?? ['الكل']).map((area) {
-                              return DropdownMenuItem<String>(
-                                value: area,
-                                child: Text(area),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedArea = value!;
-                              });
-                              _loadSalonsForCity(_selectedCity);
-                            },
-                          ),
-                        ),
-                      ],
+                    Icon(
+                      Icons.spa,
+                      color: AppColors.primary,
                     ),
-                    const SizedBox(height: 8),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        _loadSalonsForCity(_selectedCity);
-                      },
-                      icon: const Icon(Icons.search),
-                      label: const Text('بحث'),
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 40),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _isLocationGranted
+                            ? 'تم العثور على ${_nearbySalons.length} صالون ضمن نطاق $_searchRadius كم'
+                            : 'تم العثور على ${_nearbySalons.length} صالون',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.right,
                       ),
                     ),
                   ],
@@ -550,81 +442,252 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ),
 
-          // معلومات عدد الصالونات
-          Positioned(
-            right: 16,
-            bottom: 16,
-            child: Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _markers.isEmpty ? '0' : '${_markers.length - _palestinianCities.length}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text('صالون في'),
-                        const SizedBox(width: 4),
-                        Text(
-                          _selectedCity,
-                          style: TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+          // بطاقة معلومات الصالون المختار
+          if (_selectedSalon != null)
+            Positioned(
+              bottom: 20,
+              right: 16,
+              left: 16,
+              child: GestureDetector(
+                onTap: () {
+                  // الانتقال إلى صفحة تفاصيل الصالون
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SalonDetailsScreen(salonId: _selectedSalon!.id),
                     ),
-                    if (_selectedArea != 'الكل')
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                  );
+                },
+                child: Card(
+                  elevation: 8,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('منطقة:'),
-                            const SizedBox(width: 4),
-                            Text(
-                              _selectedArea,
-                              style: TextStyle(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
+                            // زر الحجز
+                            Column(
+                              children: [
+                                OutlinedButton.icon(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => SalonDetailsScreen(salonId: _selectedSalon!.id),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.calendar_today, size: 16),
+                                  label: const Text('حجز'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.primary,
+                                    side: BorderSide(color: AppColors.primary),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                if (_isLocationGranted)
+                                  Text(
+                                    '${Geolocator.distanceBetween(
+                                      _currentUserLocation.latitude,
+                                      _currentUserLocation.longitude,
+                                      _selectedSalon!.latitude,
+                                      _selectedSalon!.longitude,
+                                    ) / 1000} كم',
+                                    style: TextStyle(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                              ],
+                            ),
+
+                            const SizedBox(width: 16),
+
+                            // معلومات الصالون
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    _selectedSalon!.name,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.right,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  // التقييم
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        '(${_selectedSalon!.reviewsCount})',
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        _selectedSalon!.rating.toString(),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      const Icon(
+                                        Icons.star,
+                                        color: Colors.amber,
+                                        size: 18,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  // العنوان
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          _selectedSalon!.address,
+                                          style: TextStyle(
+                                            color: Colors.grey[600],
+                                            fontSize: 12,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.right,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Icon(
+                                        Icons.location_on,
+                                        color: AppColors.primary,
+                                        size: 16,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(width: 16),
+
+                            // صورة الصالون
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                _selectedSalon!.imageUrl,
+                                width: 70,
+                                height: 70,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    width: 70,
+                                    height: 70,
+                                    color: Colors.grey[200],
+                                    child: const Icon(Icons.image_not_supported),
+                                  );
+                                },
                               ),
                             ),
                           ],
                         ),
-                      ),
-                  ],
+
+                        const SizedBox(height: 8),
+
+                        // رسالة للمستخدم
+                        Align(
+                          alignment: Alignment.center,
+                          child: Text(
+                            'اضغط للانتقال إلى صفحة الصالون',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
 
           // زر الموقع الحالي
           if (_isLocationGranted)
             Positioned(
               left: 16,
-              bottom: 16,
+              bottom: _selectedSalon != null ? 180 : 16,
               child: FloatingActionButton(
                 onPressed: _getCurrentLocation,
                 backgroundColor: Colors.white,
+                tooltip: 'العودة إلى موقعي',
                 child: Icon(
                   Icons.my_location,
                   color: AppColors.primary,
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  void _showRadiusDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'تغيير نطاق البحث',
+          textAlign: TextAlign.right,
+        ),
+        content: StatefulBuilder(
+          builder: (context, setState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'المسافة: $_searchRadius كم',
+                textAlign: TextAlign.center,
+              ),
+              Slider(
+                value: _searchRadius,
+                min: 1.0,
+                max: 20.0,
+                divisions: 19,
+                label: '${_searchRadius.round()} كم',
+                onChanged: (value) {
+                  setState(() {
+                    _searchRadius = value;
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _loadNearbySalons(); // إعادة تحميل الصالونات بناءً على النطاق الجديد
+            },
+            child: const Text('تطبيق'),
+          ),
         ],
       ),
     );

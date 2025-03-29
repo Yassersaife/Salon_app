@@ -132,7 +132,7 @@ class _AdsCarouselState extends State<AdsCarousel> {
           child: Stack(
             children: [
               // صورة الإعلان
-              Image.network(
+              Image.asset(
                 advertisement.imageUrl,
                 width: double.infinity,
                 height: 180,

@@ -22,11 +22,12 @@ dependencies:
 
   # لتحديد الموقع
   geolocator: ^13.0.3
+  flutter_map: ^8.1.1
+  latlong2: ^0.9.1
+  permission_handler: ^11.4.0
 
   # للواجهة
   cupertino_icons: ^1.0.6
-  google_maps_flutter: ^2.12.0
-  permission_handler: ^11.4.0
 
 
 dev_dependencies:
@@ -39,6 +40,8 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/images/salons/
+    - assets/images/staff/
     - assets/images/yasser.jpg
 
 
