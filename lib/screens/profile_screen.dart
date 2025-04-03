@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:salon_booking_app/providers/user_provider.dart';
+import 'package:salon_booking_app/screens/favorite_salons_screen.dart';
 import 'package:salon_booking_app/theme.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -115,7 +116,12 @@ class ProfileScreen extends StatelessWidget {
                       icon: Icons.favorite_border,
                       title: 'الصالونات المفضلة',
                       onTap: () {
-                        // انتقال إلى صفحة المفضلة
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const FavoriteSalonsScreen(),
+                          ),
+                        );
                       },
                     ),
                     _buildMenuItem(
@@ -126,14 +132,7 @@ class ProfileScreen extends StatelessWidget {
                         // انتقال إلى صفحة الإشعارات
                       },
                     ),
-                    _buildMenuItem(
-                      context: context,
-                      icon: Icons.location_on_outlined,
-                      title: 'العناوين المحفوظة',
-                      onTap: () {
-                        // انتقال إلى صفحة العناوين
-                      },
-                    ),
+
 
                     const Divider(),
 
@@ -163,14 +162,6 @@ class ProfileScreen extends StatelessWidget {
                         // عرض سياسة الخصوصية
                       },
                     ),
-                    _buildMenuItem(
-                      context: context,
-                      icon: Icons.description_outlined,
-                      title: 'شروط الاستخدام',
-                      onTap: () {
-                        // عرض شروط الاستخدام
-                      },
-                    ),
 
                     const Divider(),
 
@@ -182,22 +173,6 @@ class ProfileScreen extends StatelessWidget {
                       title: 'عن التطبيق',
                       onTap: () {
                         _showAboutAppDialog(context);
-                      },
-                    ),
-                    _buildMenuItem(
-                      context: context,
-                      icon: Icons.star_border,
-                      title: 'تقييم التطبيق',
-                      onTap: () {
-                        // فتح صفحة التقييم في متجر التطبيقات
-                      },
-                    ),
-                    _buildMenuItem(
-                      context: context,
-                      icon: Icons.share_outlined,
-                      title: 'مشاركة التطبيق',
-                      onTap: () {
-                        // مشاركة رابط التطبيق
                       },
                     ),
 
