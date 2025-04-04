@@ -12,6 +12,7 @@ class SleekBottomNavBar extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  @override
   Widget build(BuildContext context) {
     // الألوان الأساسية
     final primaryColor = Color(0xFF9D27AF);
@@ -50,8 +51,9 @@ class SleekBottomNavBar extends StatelessWidget {
               children: [
                 _buildNavItem(Icons.home_rounded, 'الرئيسية', 0, primaryColor),
                 _buildNavItem(Icons.search_rounded, 'أبحث', 1, primaryColor),
-                _buildNavItem(Icons.calendar_today_rounded, 'حجوزاتي', 2, primaryColor),
-                _buildNavItem(Icons.person_rounded, 'حسابي', 3, primaryColor),
+                _buildNavItem(Icons.shopping_bag_rounded, 'المتجر', 2, primaryColor), // زر المتجر
+                _buildNavItem(Icons.calendar_today_rounded, 'حجوزاتي', 3, primaryColor),
+                _buildNavItem(Icons.person_rounded, 'حسابي', 4, primaryColor),
               ],
             ),
           ),
@@ -59,7 +61,6 @@ class SleekBottomNavBar extends StatelessWidget {
       ),
     );
   }
-
   Widget _buildNavItem(IconData icon, String label, int index, Color primaryColor) {
     final isSelected = currentIndex == index;
 

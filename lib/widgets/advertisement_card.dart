@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:salon_booking_app/models/advertisement.dart';
 import 'package:salon_booking_app/theme.dart';
-import 'package:salon_booking_app/screens/salon_details.dart';
+import 'package:salon_booking_app/screens/Salon/salon_details.dart';
 
 class AdsCarousel extends StatefulWidget {
   final List<Advertisement> advertisements;

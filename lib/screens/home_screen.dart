@@ -4,12 +4,13 @@ import 'package:salon_booking_app/models/salon.dart';
 import 'package:salon_booking_app/providers/salons_provider.dart';
 import 'package:salon_booking_app/providers/user_provider.dart';
 import 'package:salon_booking_app/providers/advertisements_provider.dart';
-import 'package:salon_booking_app/screens/all_salons_screen.dart';
+import 'package:salon_booking_app/screens/Salon/all_salons_screen.dart';
+import 'package:salon_booking_app/screens/Shop/shop_screen.dart';
 import 'package:salon_booking_app/screens/map_screen.dart';
 import 'package:salon_booking_app/screens/my_bookings_screen.dart';
 import 'package:salon_booking_app/screens/profile_screen.dart';
-import 'package:salon_booking_app/screens/salon_details.dart';
-import 'package:salon_booking_app/screens/service_salons_screen.dart';
+import 'package:salon_booking_app/screens/Salon/salon_details.dart';
+import 'package:salon_booking_app/screens/Salon/service_salons_screen.dart';
 import 'package:salon_booking_app/screens/search_results_screen.dart'; // تأكد من إنشاء هذا الملف
 import 'package:salon_booking_app/theme.dart';
 import 'package:salon_booking_app/widgets/advertisement_card.dart';
@@ -101,6 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Widget> pages = [
       _buildBody(),
       const MapScreen(),
+      const ShopScreen(),
       const MyBookingsScreen(),
       const ProfileScreen(),
     ];

@@ -3,6 +3,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:salon_booking_app/providers/advertisements_provider.dart';
 import 'package:salon_booking_app/providers/booking_provider.dart';
+import 'package:salon_booking_app/providers/cart_provider.dart';
+import 'package:salon_booking_app/providers/products_provider.dart';
 import 'package:salon_booking_app/providers/salons_provider.dart';
 import 'package:salon_booking_app/providers/user_provider.dart';
 import 'package:salon_booking_app/screens/home_screen.dart';
@@ -23,6 +25,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => BookingProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => AdvertisementsProvider()),
+        ChangeNotifierProvider(create: (_) => ProductsProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
 
       ],
       child: MaterialApp(

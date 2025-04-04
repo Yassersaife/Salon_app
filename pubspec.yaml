@@ -41,6 +41,7 @@ flutter:
   assets:
     - assets/images/
     - assets/images/salons/
+    - assets/images/products/
     - assets/images/staff/
     - assets/images/yasser.jpg
 

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:salon_booking_app/models/salon.dart';
 import 'package:salon_booking_app/models/service.dart';
 import 'package:salon_booking_app/providers/salons_provider.dart';
-import 'package:salon_booking_app/screens/salon_details.dart';
+import 'package:salon_booking_app/screens/Salon/salon_details.dart';
 import 'package:salon_booking_app/theme.dart';
 import 'package:salon_booking_app/widgets/salon_card.dart';
 

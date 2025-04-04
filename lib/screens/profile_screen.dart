@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:salon_booking_app/providers/user_provider.dart';
-import 'package:salon_booking_app/screens/favorite_salons_screen.dart';
+import 'package:salon_booking_app/screens/Salon/favorite_salons_screen.dart';
+import 'package:salon_booking_app/screens/Shop/order_success_screen.dart';
 import 'package:salon_booking_app/theme.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -130,6 +131,19 @@ class ProfileScreen extends StatelessWidget {
                       title: 'الإشعارات',
                       onTap: () {
                         // انتقال إلى صفحة الإشعارات
+                      },
+                    ),
+                    _buildMenuItem(
+                      context: context,
+                      icon: Icons.shopping_bag_sharp,
+                      title: 'طلباتي',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const OrderSuccessScreen(),
+                          ),
+                        );
                       },
                     ),
 
