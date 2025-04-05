@@ -1,26 +1,14 @@
+// lib/providers/user_provider.dart
 import 'package:flutter/foundation.dart';
-
-class User {
-  final int id;
-  final String name;
-  final String email;
-  final String phone;
-  final String? imageUrl;
-
-  User({
-    required this.id,
-    required this.name,
-    required this.email,
-    required this.phone,
-    this.imageUrl,
-  });
-}
+import 'package:salon_booking_app/models/user.dart';
+import 'package:salon_booking_app/services/auth_service.dart';
 
 class UserProvider with ChangeNotifier {
   User? _currentUser;
   bool _isLoading = false;
   String _error = '';
   bool _isLoggedIn = false;
+  final AuthService _authService = AuthService();
 
   // جلب البيانات
   User? get currentUser => _currentUser;
@@ -28,17 +16,42 @@ class UserProvider with ChangeNotifier {
   String get error => _error;
   bool get isLoggedIn => _isLoggedIn;
 
-  // للتجربة سنفترض أن المستخدم مسجل دخول مسبقاً
   UserProvider() {
-    // محاكاة تسجيل دخول المستخدم
-    _currentUser = User(
-      id: 1,
-      name: 'نانا',
-      email: 'sara@example.com',
-      phone: '055123456789',
-      imageUrl: "assets/images/yasser.jpg",
-    );
+    // التحقق من حالة تسجيل الدخول عند إنشاء المزود
+    _checkLoginStatus();
+  }
+
+  // التحقق من حالة تسجيل الدخول
+  Future<void> _checkLoginStatus() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      // التحقق مما إذا كان المستخدم مسجل دخول
+      _isLoggedIn = await _authService.isLoggedIn();
+
+      if (_isLoggedIn) {
+        // جلب بيانات المستخدم الحالي
+        _currentUser = await _authService.getCurrentUser();
+      }
+
+      _error = '';
+    } catch (e) {
+      _error = e.toString().replaceAll('Exception: ', '');
+      _isLoggedIn = false;
+      _currentUser = null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // تعيين معلومات المستخدم الحالي
+  void setCurrentUser(User user) {
+    _currentUser = user;
     _isLoggedIn = true;
+    _error = '';
+    notifyListeners();
   }
 
   // تسجيل الدخول
@@ -48,26 +61,47 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // في بيئة الإنتاج، سنستدعي API حقيقي
-      // مثال: final result = await ApiService().login(email, password);
-
-      // محاكاة عملية تسجيل الدخول
-      await Future.delayed(const Duration(seconds: 1));
-
-      _currentUser = User(
-        id: 1,
-        name: 'نانا',
-        email: email,
-        phone: '055123456789',
-        imageUrl: "assets/images/yasser.jpg",
-      );
-
+      _currentUser = await _authService.login(email, password);
       _isLoggedIn = true;
       _isLoading = false;
       notifyListeners();
       return true;
     } catch (e) {
-      _error = 'فشل تسجيل الدخول. تحقق من بيانات الاعتماد.';
+      _error = e.toString().replaceAll('Exception: ', '');
+      _isLoggedIn = false;
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // تسجيل مستخدم جديد
+  Future<bool> register({
+    required String name,
+    required String email,
+    required String password,
+    required String passwordConfirmation,
+    required String phone,
+  }) async {
+    _isLoading = true;
+    _error = '';
+    notifyListeners();
+
+    try {
+      _currentUser = await _authService.register(
+        name: name,
+        email: email,
+        password: password,
+        passwordConfirmation: passwordConfirmation,
+        phone: phone,
+      );
+      _isLoggedIn = true;
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString().replaceAll('Exception: ', '');
+      _isLoggedIn = false;
       _isLoading = false;
       notifyListeners();
       return false;
@@ -80,14 +114,11 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // في بيئة الإنتاج، سنستدعي API حقيقي
-      // مثال: await ApiService().logout();
-
-      await Future.delayed(const Duration(milliseconds: 500));
+      await _authService.logout();
       _currentUser = null;
       _isLoggedIn = false;
     } catch (e) {
-      _error = 'حدث خطأ أثناء تسجيل الخروج';
+      _error = e.toString().replaceAll('Exception: ', '');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -107,11 +138,10 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // في بيئة الإنتاج، سنستدعي API حقيقي
-      // مثال: final result = await ApiService().updateProfile(userData);
+      // هنا يمكن إضافة استدعاء API لتحديث البيانات في الباك إند
+      // مثال: await _authService.updateProfile(userData);
 
-      await Future.delayed(const Duration(seconds: 1));
-
+      // تحديث البيانات محلياً
       _currentUser = User(
         id: _currentUser!.id,
         name: name,
@@ -124,7 +154,7 @@ class UserProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = 'حدث خطأ أثناء تحديث الملف الشخصي';
+      _error = e.toString().replaceAll('Exception: ', '');
       _isLoading = false;
       notifyListeners();
       return false;

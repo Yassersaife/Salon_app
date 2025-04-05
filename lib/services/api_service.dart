@@ -3,10 +3,10 @@ import 'package:http/http.dart' as http;
 import 'package:salon_booking_app/models/booking.dart';
 import 'package:salon_booking_app/models/salon.dart';
 import 'package:salon_booking_app/models/service.dart';
+import 'package:salon_booking_app/theme.dart';
 
 class ApiService {
   // قم بتغيير هذا الرابط إلى الخاص بك عند استخدام API حقيقي
-  static const String baseUrl = 'https://your-api-url.com/api';
 
   // الهيدرز المستخدمة في الطلبات
   final Map<String, String> _headers = {
@@ -24,7 +24,7 @@ class ApiService {
   // تسجيل الدخول
   Future<Map<String, dynamic>> login(String email, String password) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/login'),
+      Uri.parse('${ApiConfig.baseUrl}/login'),
       headers: _headers,
       body: jsonEncode({
         'email': email,
@@ -47,7 +47,7 @@ class ApiService {
       String phone,
       ) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/register'),
+      Uri.parse('${ApiConfig.baseUrl}/register'),
       headers: _headers,
       body: jsonEncode({
         'name': name,
@@ -67,7 +67,7 @@ class ApiService {
   // تسجيل الخروج
   Future<void> logout() async {
     final response = await http.post(
-      Uri.parse('$baseUrl/logout'),
+      Uri.parse('${ApiConfig.baseUrl}/logout'),
       headers: _headers,
     );
 
@@ -81,7 +81,7 @@ class ApiService {
   // جلب قائمة الصالونات
   Future<List<Salon>> getSalons() async {
     final response = await http.get(
-      Uri.parse('$baseUrl/salons'),
+      Uri.parse('${ApiConfig.baseUrl}/salons'),
       headers: _headers,
     );
 
@@ -96,7 +96,7 @@ class ApiService {
   // جلب الصالونات القريبة
   Future<List<Salon>> getNearbySalons(double latitude, double longitude, double radius) async {
     final response = await http.get(
-      Uri.parse('$baseUrl/salons/nearby?latitude=$latitude&longitude=$longitude&radius=$radius'),
+      Uri.parse('${ApiConfig.baseUrl}/salons/nearby?latitude=$latitude&longitude=$longitude&radius=$radius'),
       headers: _headers,
     );
 
@@ -111,7 +111,7 @@ class ApiService {
   // جلب تفاصيل صالون معين
   Future<Salon> getSalonDetails(int salonId) async {
     final response = await http.get(
-      Uri.parse('$baseUrl/salons/$salonId'),
+      Uri.parse('${ApiConfig.baseUrl}/salons/$salonId'),
       headers: _headers,
     );
 
@@ -125,7 +125,7 @@ class ApiService {
   // البحث عن صالونات
   Future<List<Salon>> searchSalons(String query) async {
     final response = await http.get(
-      Uri.parse('$baseUrl/salons/search?query=$query'),
+      Uri.parse('${ApiConfig.baseUrl}/salons/search?query=$query'),
       headers: _headers,
     );
 
@@ -140,7 +140,7 @@ class ApiService {
   // تبديل حالة المفضلة
   Future<void> toggleFavorite(int salonId, bool isFavorite) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/salons/$salonId/favorite'),
+      Uri.parse('${ApiConfig.baseUrl}/salons/$salonId/favorite'),
       headers: _headers,
       body: jsonEncode({
         'is_favorite': isFavorite,
@@ -157,7 +157,7 @@ class ApiService {
   // إنشاء حجز جديد
   Future<Booking> createBooking(Map<String, dynamic> bookingData) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/bookings'),
+      Uri.parse('${ApiConfig.baseUrl}/bookings'),
       headers: _headers,
       body: jsonEncode(bookingData),
     );
@@ -172,7 +172,7 @@ class ApiService {
   // جلب حجوزات المستخدم
   Future<List<Booking>> getUserBookings() async {
     final response = await http.get(
-      Uri.parse('$baseUrl/bookings'),
+      Uri.parse('${ApiConfig.baseUrl}/bookings'),
       headers: _headers,
     );
 
@@ -187,7 +187,7 @@ class ApiService {
   // إلغاء حجز
   Future<Booking> cancelBooking(int bookingId) async {
     final response = await http.put(
-      Uri.parse('$baseUrl/bookings/$bookingId/cancel'),
+      Uri.parse('${ApiConfig.baseUrl}/bookings/$bookingId/cancel'),
       headers: _headers,
     );
 
@@ -203,7 +203,7 @@ class ApiService {
   // جلب فئات الخدمات
   Future<List<ServiceCategory>> getServiceCategories() async {
     final response = await http.get(
-      Uri.parse('$baseUrl/service-categories'),
+      Uri.parse('${ApiConfig.baseUrl}/service-categories'),
       headers: _headers,
     );
 

@@ -9,7 +9,9 @@ class AppColors {
   static Color textLight = const Color(0xFF999999);
   static Color border = const Color(0xFFE0E0E0);
 }
-
+class ApiConfig {
+  static const String baseUrl = 'http://192.168.88.6:8000/api';
+}
 class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(

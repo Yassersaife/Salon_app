@@ -7,6 +7,7 @@ import 'package:salon_booking_app/providers/cart_provider.dart';
 import 'package:salon_booking_app/providers/products_provider.dart';
 import 'package:salon_booking_app/providers/salons_provider.dart';
 import 'package:salon_booking_app/providers/user_provider.dart';
+import 'package:salon_booking_app/screens/Auth/splash_screen.dart';
 import 'package:salon_booking_app/screens/home_screen.dart';
 import 'package:salon_booking_app/theme.dart';
 
@@ -44,7 +45,7 @@ class MyApp extends StatelessWidget {
         ],
         locale: const Locale('ar', ''),
 
-        home: const HomeScreen(),
+        home: const SplashScreen(),
       ),
     );
   }

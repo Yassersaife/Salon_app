@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:salon_booking_app/providers/user_provider.dart';
+import 'package:salon_booking_app/screens/Auth/login_screen.dart';
 import 'package:salon_booking_app/screens/Salon/favorite_salons_screen.dart';
 import 'package:salon_booking_app/screens/Shop/order_success_screen.dart';
 import 'package:salon_booking_app/theme.dart';
@@ -70,7 +71,7 @@ class ProfileScreen extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    userProvider.currentUser?.email ?? 'user@example.com',
+                                    userProvider.currentUser?.email ?? '',
                                     style: TextStyle(
                                       color: Colors.white.withOpacity(0.9),
                                       fontSize: 14,
@@ -78,7 +79,7 @@ class ProfileScreen extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    userProvider.currentUser?.phone ?? '055xxxxxxx',
+                                    userProvider.currentUser?.phone ?? '',
                                     style: TextStyle(
                                       color: Colors.white.withOpacity(0.9),
                                       fontSize: 14,
@@ -284,7 +285,10 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+
   void _showLogoutDialog(BuildContext context, UserProvider userProvider) {
+    final rootContext = context; // احفظ نسخة من السياق الأصلي
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -303,9 +307,35 @@ class ProfileScreen extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context);
-              await userProvider.logout();
-              // يمكن هنا الانتقال إلى صفحة تسجيل الدخول
+              Navigator.pop(context); // إغلاق AlertDialog
+
+              // إظهار مؤشر تحميل
+              showDialog(
+                context: rootContext, // استخدم rootContext
+                barrierDismissible: false,
+                builder: (context) => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+
+              try {
+                await userProvider.logout();
+
+                Navigator.pop(rootContext); // إغلاق التحميل
+                Navigator.of(rootContext).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => LoginScreen()),
+                      (route) => false,
+                );
+              } catch (e) {
+                Navigator.pop(rootContext); // إغلاق التحميل
+
+                ScaffoldMessenger.of(rootContext).showSnackBar(
+                  SnackBar(
+                    content: Text('فشل تسجيل الخروج: ${e.toString()}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
@@ -316,7 +346,6 @@ class ProfileScreen extends StatelessWidget {
       ),
     );
   }
-
   void _showFAQDialog(BuildContext context) {
     showDialog(
       context: context,
